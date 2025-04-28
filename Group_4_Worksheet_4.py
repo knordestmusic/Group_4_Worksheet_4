@@ -2,11 +2,12 @@ import numpy as np
 import pretty_midi
 from scipy.io.wavfile import write
 import soundfile as sf
+from SchroederReverb import SchroederReverb
+
 
 def Section_1_1():
-    
     """FM SYNTHESIS"""
-    
+
     midi_path = "MIDI.mid"  # arranged in a daw and exported to be used with pretty midi
     fs = 48000
     mod_index = 4.0
@@ -62,14 +63,40 @@ def Section_1_1():
 
     write(output_wav, fs, (audio * 32767).astype(np.int16))
 
-----------------------------########----------------------------########----------------------------
+    fm, fs = sf.read("fm_synthesis_output.wav")
 
-def Section_1_2(): 
-    
+    reverb = SchroederReverb(
+        fs=fs,
+        comb_delays=[1000, 3000, 1500, 2000],
+        comb_gains=[0.8, 0.8, 0.7, 0.75],
+        ap_delays=[500, 600, 850, 650],
+        ap_gain=0.6,
+    )
+
+    dry_level = 0.5
+    wet_level = 0.8
+
+    def apply_reverb(dry):
+        wet = reverb.process(dry)
+        out = dry_level * dry + wet_level * wet
+        # avoid clipping
+        peak = np.max(np.abs(out))
+        if peak > 1.0:
+            out = out / peak
+        return out
+
+    fm_rev = apply_reverb(fm)
+    sf.write("fm_with_reverb.wav", fm_rev, fs)
+
+
+# ----------------------------########----------------------------########----------------------------#
+
+
+def Section_1_2():
     """WAVEGUIDE SYNTHESIS"""
-    
-    from waveguide_module import waveGuide 
-    
+
+    from waveguide_module import waveGuide
+
     def synthesize_midi(
         midi_file_path,
         output_file_path="output.wav",
@@ -137,7 +164,6 @@ def Section_1_2():
 
         return output
 
-
     midi_file = "MIDI.mid"
 
     synthesize_midi(
@@ -148,7 +174,31 @@ def Section_1_2():
         base_loss_factor=0.998,
         loss_variation=0.005,
     )
-    
+
+    fm, fs = sf.read("waveGuide_Synthesis.wav")
+
+    reverb = SchroederReverb(
+        fs=fs,
+        comb_delays=[1000, 3000, 1500, 2000],
+        comb_gains=[0.8, 0.8, 0.7, 0.75],
+        ap_delays=[500, 600, 850, 650],
+        ap_gain=0.6,
+    )
+
+    dry_level = 0.5
+    wet_level = 0.8
+
+    def apply_reverb(dry):
+        wet = reverb.process(dry)
+        out = dry_level * dry + wet_level * wet
+        # avoid clipping
+        peak = np.max(np.abs(out))
+        if peak > 1.0:
+            out = out / peak
+        return out
+
+    fm_rev = apply_reverb(fm)
+    sf.write("waveguide_with_reverb.wav", fm_rev, fs)
 
 
 Section_1_1()  # FOR CALLING THE RESULTS OF FM SYNTHESIS SECTION
